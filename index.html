@@ -463,6 +463,132 @@
     .link-btn:hover { color: #1a1a1a; }
     .link-btn.danger { color: #c00; }
     .link-btn.danger:hover { color: #800; }
+
+    /* Summary view */
+    .summary-header {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1rem;
+    }
+    .summary-stat-row { font-size: 0.95rem; color: #333; margin-bottom: 0.3rem; }
+    .summary-stat-row:last-child { margin-bottom: 0; }
+    .summary-stat-row.distribution { color: #555; font-size: 0.9rem; }
+    .summary-stat-row.muted { color: #888; font-style: italic; }
+    .summary-stat-num { font-weight: 700; color: #1a1a1a; }
+    .summary-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .summary-filter-label {
+      font-size: 0.85rem;
+      color: #555;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .summary-filter-label select {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.9rem;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      background: #fff;
+      font-family: inherit;
+    }
+    .muted-text { color: #888; font-size: 0.85rem; }
+    .summary-table-wrap {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .summary-table th, .summary-table td {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #f0f0f0;
+      white-space: nowrap;
+    }
+    .summary-table th {
+      background: #fafafa;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: #555;
+      cursor: pointer;
+      user-select: none;
+      position: sticky;
+      top: 0;
+    }
+    .summary-table th:hover { background: #f0f0f0; }
+    .summary-table th.num, .summary-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .summary-table tbody tr { cursor: pointer; }
+    .summary-table tbody tr:nth-child(even) { background: #fafafa; }
+    .summary-table tbody tr:hover { background: #eef4f8; }
+    .summary-table tbody tr:nth-child(even):hover { background: #e6eef4; }
+    .summary-table tbody tr:last-child td { border-bottom: none; }
+    .sort-ind {
+      display: inline-block;
+      width: 0.7em;
+      font-size: 0.75em;
+      color: #1a1a1a;
+      margin-left: 0.15em;
+    }
+    .quality-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 0.4em;
+      vertical-align: middle;
+    }
+    .quality-dot.quality-substantive { background: #3a8a4a; }
+    .quality-dot.quality-okay { background: #707070; }
+    .quality-dot.quality-talking { background: #c89034; }
+
+    /* Student detail modal */
+    .modal-wide { max-width: 600px; }
+    .detail-history {
+      max-height: 50vh;
+      overflow-y: auto;
+      margin-bottom: 0.5rem;
+      border-top: 1px solid #eee;
+    }
+    .detail-entry {
+      padding: 0.6rem 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .detail-entry:last-child { border-bottom: none; }
+    .detail-entry-header {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 0.3rem;
+    }
+    .detail-time {
+      color: #999;
+      margin-left: 0.4rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .detail-entry-body {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .detail-empty {
+      text-align: center;
+      color: #888;
+      padding: 2rem 1rem;
+      font-style: italic;
+    }
   </style>
   <script src="https://unpkg.com/dexie@3.2.7/dist/dexie.min.js"></script>
 </head>
@@ -471,6 +597,7 @@
     <button data-view="roster" class="active">Roster</button>
     <button data-view="inclass">In Class</button>
     <button data-view="review">Review</button>
+    <button data-view="summary">Summary</button>
   </nav>
 
   <main>
@@ -571,6 +698,46 @@
         <div id="review-student-list"></div>
       </div>
     </section>
+
+    <section id="view-summary" class="view" hidden>
+      <p id="summary-empty" class="empty" hidden></p>
+
+      <div id="summary-content" hidden>
+        <div class="summary-header">
+          <div id="summary-stats"></div>
+        </div>
+
+        <div class="summary-toolbar">
+          <label class="summary-filter-label">
+            View:
+            <select id="summary-filter">
+              <option value="all">All students</option>
+              <option value="no-14">No contributions in last 14 days</option>
+              <option value="low-sub">Fewer than 3 substantive this semester</option>
+            </select>
+          </label>
+          <span id="summary-filter-count" class="muted-text"></span>
+        </div>
+
+        <div class="summary-table-wrap">
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th data-col="name">Name <span class="sort-ind"></span></th>
+                <th data-col="seat">Seat <span class="sort-ind"></span></th>
+                <th data-col="total" class="num">Total <span class="sort-ind"></span></th>
+                <th data-col="sub" class="num">Substantive <span class="sort-ind"></span></th>
+                <th data-col="ok" class="num">Okay <span class="sort-ind"></span></th>
+                <th data-col="talk" class="num">Just talking <span class="sort-ind"></span></th>
+                <th data-col="sessions" class="num">Sessions <span class="sort-ind"></span></th>
+                <th data-col="last">Last <span class="sort-ind"></span></th>
+              </tr>
+            </thead>
+            <tbody id="summary-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </main>
 
   <div id="contribution-modal" class="modal-backdrop" hidden>
@@ -599,6 +766,15 @@
       </label>
       <button type="button" class="modal-cancel" data-cancel>Cancel</button>
       <div id="edit-contrib-error" class="modal-error" hidden></div>
+    </div>
+  </div>
+
+  <div id="student-detail-modal" class="modal-backdrop" hidden>
+    <div class="modal modal-wide" role="dialog">
+      <h2 id="detail-student-name"></h2>
+      <div id="detail-stats" class="modal-subheader"></div>
+      <div id="detail-history" class="detail-history"></div>
+      <button type="button" class="modal-cancel" data-cancel>Close</button>
     </div>
   </div>
 
@@ -727,6 +903,7 @@
       if (name === 'roster') renderRoster();
       else if (name === 'inclass') renderInClass();
       else if (name === 'review') renderReview();
+      else if (name === 'summary') renderSummary();
     }
 
     function formatSessionDate(isoDate) {
@@ -1367,6 +1544,275 @@
         errorEl.hidden = false;
         addSubmitting = false;
       }
+    });
+
+    // --- Summary view ---
+
+    let summaryState = {
+      sortColumn: 'name',
+      sortDir: 'asc',
+      filter: 'all'
+    };
+
+    function formatShortDate(iso) {
+      if (!iso) return 'Never';
+      const [y, m, d] = String(iso).split('-').map(Number);
+      if (!y || !m || !d) return 'Never';
+      const date = new Date(y, m - 1, d);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function pct(num, denom) {
+      if (!denom) return 0;
+      return Math.round((num / denom) * 100);
+    }
+
+    async function renderSummary() {
+      const students = await db.getAllStudents();
+      const sessions = await db.getAllSessions();
+      const contribs = await db.getAllContributions();
+
+      const emptyEl = document.getElementById('summary-empty');
+      const contentEl = document.getElementById('summary-content');
+
+      if (students.length === 0) {
+        emptyEl.textContent = 'No students yet. Add students in the Roster view first.';
+        emptyEl.hidden = false;
+        contentEl.hidden = true;
+        return;
+      }
+      if (sessions.length === 0) {
+        emptyEl.textContent = 'No sessions yet. Start one from the In Class view.';
+        emptyEl.hidden = false;
+        contentEl.hidden = true;
+        return;
+      }
+      emptyEl.hidden = true;
+      contentEl.hidden = false;
+
+      const sessionsById = new Map(sessions.map(s => [s.id, s]));
+
+      const rows = students.map(s => {
+        const studentContribs = contribs.filter(c => c.student_id === s.id);
+        const touchedSessions = new Set();
+        let sub = 0, ok = 0, talk = 0;
+        let lastSessionDate = null;
+        for (const c of studentContribs) {
+          const session = sessionsById.get(c.session_id);
+          if (!session) continue;
+          touchedSessions.add(c.session_id);
+          if (c.quality === 'Substantive') sub++;
+          else if (c.quality === 'Okay') ok++;
+          else if (c.quality === 'Just talking') talk++;
+          if (session.date && (!lastSessionDate || session.date > lastSessionDate)) {
+            lastSessionDate = session.date;
+          }
+        }
+        return {
+          id: s.id,
+          name: s.name ?? '',
+          seat_row: Number(s.seat_row) || 0,
+          seat_col: Number(s.seat_col) || 0,
+          total: studentContribs.length,
+          sub, ok, talk,
+          sessionsTouched: touchedSessions.size,
+          sessionsTotal: sessions.length,
+          lastSessionDate
+        };
+      });
+
+      // Class-level header
+      const totalSub  = contribs.filter(c => c.quality === 'Substantive').length;
+      const totalOk   = contribs.filter(c => c.quality === 'Okay').length;
+      const totalTalk = contribs.filter(c => c.quality === 'Just talking').length;
+      const totalC = contribs.length;
+
+      const distHtml = totalC > 0
+        ? `<div class="summary-stat-row distribution">
+             <span class="quality-dot quality-substantive"></span>${pct(totalSub, totalC)}% Substantive
+             · <span class="quality-dot quality-okay"></span>${pct(totalOk, totalC)}% Okay
+             · <span class="quality-dot quality-talking"></span>${pct(totalTalk, totalC)}% Just talking
+           </div>`
+        : '<div class="summary-stat-row muted">No contributions logged yet.</div>';
+
+      document.getElementById('summary-stats').innerHTML = `
+        <div class="summary-stat-row">
+          <span class="summary-stat-num">${sessions.length}</span> session${sessions.length === 1 ? '' : 's'} ·
+          <span class="summary-stat-num">${totalC}</span> total contribution${totalC === 1 ? '' : 's'}
+        </div>
+        ${distHtml}
+      `;
+
+      // Filter (14-day cutoff in local time)
+      const today = new Date();
+      const cutoff = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 14);
+      const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+
+      let filtered = rows;
+      if (summaryState.filter === 'no-14') {
+        filtered = rows.filter(r => !r.lastSessionDate || r.lastSessionDate < cutoffStr);
+      } else if (summaryState.filter === 'low-sub') {
+        filtered = rows.filter(r => r.sub < 3);
+      }
+
+      // Sort
+      const dir = summaryState.sortDir === 'asc' ? 1 : -1;
+      filtered.sort((a, b) => {
+        let cmp = 0;
+        switch (summaryState.sortColumn) {
+          case 'name': cmp = String(a.name).localeCompare(String(b.name)); break;
+          case 'seat': cmp = (a.seat_row - b.seat_row) || (a.seat_col - b.seat_col); break;
+          case 'total': cmp = a.total - b.total; break;
+          case 'sub':   cmp = a.sub - b.sub; break;
+          case 'ok':    cmp = a.ok - b.ok; break;
+          case 'talk':  cmp = a.talk - b.talk; break;
+          case 'sessions': cmp = a.sessionsTouched - b.sessionsTouched; break;
+          case 'last': {
+            // "Never" (null) sorts to the bottom in asc, top in desc
+            const ad = a.lastSessionDate || '9999-99-99';
+            const bd = b.lastSessionDate || '9999-99-99';
+            cmp = ad < bd ? -1 : ad > bd ? 1 : 0;
+            break;
+          }
+        }
+        if (cmp === 0 && summaryState.sortColumn !== 'name') {
+          cmp = String(a.name).localeCompare(String(b.name));
+        }
+        return cmp * dir;
+      });
+
+      // Sort indicators
+      document.querySelectorAll('.summary-table th[data-col]').forEach(th => {
+        const ind = th.querySelector('.sort-ind');
+        if (!ind) return;
+        ind.textContent = th.dataset.col === summaryState.sortColumn
+          ? (summaryState.sortDir === 'asc' ? '▲' : '▼')
+          : '';
+      });
+
+      // Filter count
+      const countEl = document.getElementById('summary-filter-count');
+      countEl.textContent = summaryState.filter !== 'all'
+        ? `${filtered.length} of ${rows.length} student${rows.length === 1 ? '' : 's'}`
+        : '';
+
+      // Render rows
+      const tbody = document.getElementById('summary-tbody');
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:1.5rem;background:transparent;">No students match this filter.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(r => `
+        <tr data-student-id="${r.id}">
+          <td>${escapeHtml(r.name)}</td>
+          <td>Row ${r.seat_row}, Col ${r.seat_col}</td>
+          <td class="num">${r.total}</td>
+          <td class="num"><span class="quality-dot quality-substantive"></span>${r.sub}</td>
+          <td class="num"><span class="quality-dot quality-okay"></span>${r.ok}</td>
+          <td class="num"><span class="quality-dot quality-talking"></span>${r.talk}</td>
+          <td class="num">${r.sessionsTouched} / ${r.sessionsTotal}</td>
+          <td>${escapeHtml(formatShortDate(r.lastSessionDate))}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Sort header clicks
+    document.querySelector('.summary-table thead').addEventListener('click', (e) => {
+      const th = e.target.closest('th[data-col]');
+      if (!th) return;
+      const col = th.dataset.col;
+      if (summaryState.sortColumn === col) {
+        summaryState.sortDir = summaryState.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        summaryState.sortColumn = col;
+        summaryState.sortDir = 'asc';
+      }
+      renderSummary();
+    });
+
+    document.getElementById('summary-filter').addEventListener('change', (e) => {
+      summaryState.filter = e.target.value;
+      renderSummary();
+    });
+
+    document.getElementById('summary-tbody').addEventListener('click', (e) => {
+      const tr = e.target.closest('tr[data-student-id]');
+      if (!tr) return;
+      openStudentDetail(Number(tr.dataset.studentId));
+    });
+
+    // --- Student detail modal ---
+
+    async function openStudentDetail(studentId) {
+      const student = await db.getStudent(studentId);
+      if (!student) return;
+      const allContribs = await db.getContributionsByStudent(studentId);
+      const sessions = await db.getAllSessions();
+      const sessionsById = new Map(sessions.map(s => [s.id, s]));
+
+      const enriched = allContribs.map(c => ({
+        ...c,
+        sessionDate: sessionsById.get(c.session_id)?.date ?? null,
+        sessionTopic: sessionsById.get(c.session_id)?.topic ?? ''
+      }));
+
+      // Sort: session date desc, then timestamp desc within a date
+      enriched.sort((a, b) => {
+        const ad = a.sessionDate || '';
+        const bd = b.sessionDate || '';
+        if (ad !== bd) return bd.localeCompare(ad);
+        const at = a.timestamp ?? '';
+        const bt = b.timestamp ?? '';
+        return bt.localeCompare(at);
+      });
+
+      document.getElementById('detail-student-name').textContent = student.name;
+
+      const total = enriched.length;
+      const sub  = enriched.filter(c => c.quality === 'Substantive').length;
+      const ok   = enriched.filter(c => c.quality === 'Okay').length;
+      const talk = enriched.filter(c => c.quality === 'Just talking').length;
+      const uniqSessions = new Set(enriched.map(c => c.session_id)).size;
+
+      const statsEl = document.getElementById('detail-stats');
+      statsEl.textContent = total === 0
+        ? 'No contributions yet'
+        : `${total} contribution${total === 1 ? '' : 's'} across ${uniqSessions} session${uniqSessions === 1 ? '' : 's'} (${sub} substantive, ${ok} okay, ${talk} just talking)`;
+
+      const historyEl = document.getElementById('detail-history');
+      if (total === 0) {
+        historyEl.innerHTML = '<div class="detail-empty">No contributions logged for this student.</div>';
+      } else {
+        historyEl.innerHTML = enriched.map(c => {
+          const topic = (c.sessionTopic ?? '').trim() || 'Untitled session';
+          const dateLabel = c.sessionDate ? formatSessionDate(c.sessionDate) : 'Unknown date';
+          return `
+            <div class="detail-entry">
+              <div class="detail-entry-header">
+                ${escapeHtml(dateLabel)} — ${escapeHtml(topic)}
+                <span class="detail-time">${escapeHtml(formatTimeOfDay(c.timestamp))}</span>
+              </div>
+              <div class="detail-entry-body">
+                <span class="quality-badge quality-${qualityClass(c.quality)}">${escapeHtml(c.quality)}</span>
+                ${c.note ? `<span class="contrib-note">${escapeHtml(c.note)}</span>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('student-detail-modal').hidden = false;
+    }
+
+    function closeStudentDetail() {
+      document.getElementById('student-detail-modal').hidden = true;
+    }
+
+    document.getElementById('student-detail-modal').addEventListener('pointerup', (e) => {
+      const modalEl = document.getElementById('student-detail-modal');
+      if (e.target === modalEl) { closeStudentDetail(); return; }
+      if (e.target.closest('[data-cancel]')) { closeStudentDetail(); return; }
     });
 
     renderRoster();
