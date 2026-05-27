@@ -27,11 +27,94 @@
     h1 { font-size: 2rem; margin: 0 0 0.5rem; }
     p  { color: #555; margin: 0; }
   </style>
+  <script src="https://unpkg.com/dexie@3.2.7/dist/dexie.min.js"></script>
 </head>
 <body>
   <main>
     <h1>Participation Tracker</h1>
     <p>Placeholder &mdash; setup in progress.</p>
   </main>
+
+  <script>
+    const _dexie = new Dexie('ParticipationTracker');
+
+    _dexie.version(1).stores({
+      students:      '++id, name, seat_row, seat_col, computing_id',
+      sessions:      '++id, date, status',
+      contributions: '++id, student_id, session_id, timestamp'
+    });
+
+    const db = {
+      _dexie,
+
+      async addStudent(data) {
+        return await _dexie.students.add(data);
+      },
+      async updateStudent(id, data) {
+        await _dexie.students.update(id, data);
+        return await _dexie.students.get(id);
+      },
+      async deleteStudent(id) {
+        await _dexie.students.delete(id);
+      },
+      async getAllStudents() {
+        return await _dexie.students.toArray();
+      },
+      async getStudent(id) {
+        return await _dexie.students.get(id);
+      },
+
+      async addSession(data = {}) {
+        const record = {
+          date: new Date().toISOString().slice(0, 10),
+          status: 'active',
+          ...data
+        };
+        return await _dexie.sessions.add(record);
+      },
+      async updateSession(id, data) {
+        await _dexie.sessions.update(id, data);
+        return await _dexie.sessions.get(id);
+      },
+      async deleteSession(id) {
+        await _dexie.sessions.delete(id);
+      },
+      async getAllSessions() {
+        return await _dexie.sessions.toArray();
+      },
+      async getActiveSession() {
+        return await _dexie.sessions.where('status').equals('active').first();
+      },
+      async getSession(id) {
+        return await _dexie.sessions.get(id);
+      },
+
+      async addContribution(data) {
+        const record = {
+          timestamp: new Date().toISOString(),
+          ...data
+        };
+        return await _dexie.contributions.add(record);
+      },
+      async updateContribution(id, data) {
+        await _dexie.contributions.update(id, data);
+        return await _dexie.contributions.get(id);
+      },
+      async deleteContribution(id) {
+        await _dexie.contributions.delete(id);
+      },
+      async getContributionsBySession(sessionId) {
+        return await _dexie.contributions.where('session_id').equals(sessionId).toArray();
+      },
+      async getContributionsByStudent(studentId) {
+        return await _dexie.contributions.where('student_id').equals(studentId).toArray();
+      },
+      async getAllContributions() {
+        return await _dexie.contributions.toArray();
+      }
+    };
+
+    window.db = db;
+  </script>
 </body>
 </html>
