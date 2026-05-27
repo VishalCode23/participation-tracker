@@ -120,6 +120,76 @@
     }
     .errors { color: #c00; margin: 0.5rem 0 0; padding-left: 1.2rem; font-size: 0.9rem; }
     .bulk-summary { margin: 0.5rem 0 0; font-size: 0.9rem; }
+
+    /* In Class view */
+    .start-session-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 50vh;
+    }
+    .start-session-wrap button {
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 8px;
+    }
+    #session-form-el {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 1rem;
+      display: grid;
+      gap: 0.75rem;
+      max-width: 500px;
+      margin: 2rem auto 0;
+    }
+    #session-form-el h2 { font-size: 1.05rem; margin: 0; }
+    #session-form-el label { display: flex; flex-direction: column; font-size: 0.85rem; color: #555; }
+    #session-form-el input {
+      padding: 0.5rem;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      margin-top: 0.25rem;
+      font-size: 0.95rem;
+    }
+    .session-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    .session-date { font-size: 0.85rem; opacity: 0.75; }
+    .session-topic { font-size: 1.25rem; font-weight: 600; margin-top: 0.15rem; }
+    .session-header button {
+      background: #fff;
+      color: #1a1a1a;
+      border-color: #fff;
+      font-weight: 500;
+    }
+    .session-header button:hover { background: #e8e8e8; }
+    .seating-placeholder {
+      background: #fff;
+      border: 1px dashed #d0d0d0;
+      border-radius: 8px;
+      padding: 3rem 1rem;
+      text-align: center;
+      color: #888;
+    }
+    .warning-banner {
+      background: #fff8e1;
+      border: 1px solid #f0d77a;
+      color: #6b5a0a;
+      padding: 0.6rem 0.85rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
   </style>
   <script src="https://unpkg.com/dexie@3.2.7/dist/dexie.min.js"></script>
 </head>
@@ -177,8 +247,38 @@
     </section>
 
     <section id="view-inclass" class="view" hidden>
-      <h1>In Class</h1>
-      <p>Not built yet.</p>
+      <div id="multi-active-warning" class="warning-banner" hidden>
+        Note: another older session was left open. End it from the Review view.
+      </div>
+
+      <div id="no-active-session" class="start-session-wrap" hidden>
+        <button id="btn-start-session" class="primary">Start New Session</button>
+      </div>
+
+      <form id="session-form-el" hidden>
+        <h2>Start New Session</h2>
+        <label>Topic
+          <input name="topic" placeholder="e.g., Porter's Five Forces" autocomplete="off">
+        </label>
+        <label>Date
+          <input name="date" type="date" required>
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="primary">Start Session</button>
+          <button type="button" id="session-form-cancel">Cancel</button>
+        </div>
+      </form>
+
+      <div id="active-session" hidden>
+        <div class="session-header">
+          <div>
+            <div class="session-date" id="session-date"></div>
+            <div class="session-topic" id="session-topic"></div>
+          </div>
+          <button id="btn-end-session">End Session</button>
+        </div>
+        <div class="seating-placeholder">Seating chart coming in next chunk</div>
+      </div>
     </section>
 
     <section id="view-review" class="view" hidden>
@@ -234,8 +334,17 @@
       async getAllSessions() {
         return await _dexie.sessions.toArray();
       },
+      async getActiveSessions() {
+        const list = await _dexie.sessions.where('status').equals('active').toArray();
+        list.sort((a, b) => {
+          if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+          return b.id - a.id;
+        });
+        return list;
+      },
       async getActiveSession() {
-        return await _dexie.sessions.where('status').equals('active').first();
+        const list = await db.getActiveSessions();
+        return list[0] ?? null;
       },
       async getSession(id) {
         return await _dexie.sessions.get(id);
@@ -281,7 +390,76 @@
         b.classList.toggle('active', b.dataset.view === name);
       });
       if (name === 'roster') renderRoster();
+      else if (name === 'inclass') renderInClass();
     }
+
+    function formatSessionDate(isoDate) {
+      if (!isoDate) return '';
+      const [y, m, d] = String(isoDate).split('-').map(Number);
+      if (!y || !m || !d) return isoDate;
+      const date = new Date(y, m - 1, d);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+      });
+    }
+
+    async function renderInClass() {
+      const activeList = await db.getActiveSessions();
+      const current = activeList[0] ?? null;
+
+      document.getElementById('multi-active-warning').hidden = activeList.length <= 1;
+
+      const noActive = document.getElementById('no-active-session');
+      const form = document.getElementById('session-form-el');
+      const active = document.getElementById('active-session');
+
+      if (current) {
+        noActive.hidden = true;
+        form.hidden = true;
+        active.hidden = false;
+        document.getElementById('session-date').textContent = formatSessionDate(current.date);
+        const topic = (current.topic ?? '').trim();
+        document.getElementById('session-topic').textContent = topic || 'Untitled session';
+      } else {
+        noActive.hidden = false;
+        form.hidden = true;
+        active.hidden = true;
+      }
+    }
+
+    document.getElementById('btn-start-session').addEventListener('click', () => {
+      const form = document.getElementById('session-form-el');
+      form.reset();
+      form.date.value = new Date().toISOString().slice(0, 10);
+      document.getElementById('no-active-session').hidden = true;
+      form.hidden = false;
+      form.topic.focus();
+    });
+
+    document.getElementById('session-form-cancel').addEventListener('click', () => {
+      document.getElementById('session-form-el').hidden = true;
+      renderInClass();
+    });
+
+    document.getElementById('session-form-el').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      await db.addSession({
+        topic: String(fd.get('topic') ?? '').trim(),
+        date: String(fd.get('date') ?? '').trim(),
+        status: 'active'
+      });
+      renderInClass();
+    });
+
+    document.getElementById('btn-end-session').addEventListener('click', async () => {
+      const current = await db.getActiveSession();
+      if (!current) { renderInClass(); return; }
+      const ok = confirm("End this session? You'll still be able to review and edit contributions afterward.");
+      if (!ok) return;
+      await db.updateSession(current.id, { status: 'closed' });
+      renderInClass();
+    });
 
     document.querySelectorAll('.topnav button').forEach(b => {
       b.addEventListener('click', () => showView(b.dataset.view));
