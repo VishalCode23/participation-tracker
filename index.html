@@ -589,6 +589,115 @@
       padding: 2rem 1rem;
       font-style: italic;
     }
+
+    /* Backup view */
+    .backup-section {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .backup-section h2 {
+      font-size: 1.05rem;
+      margin: 0 0 0.4rem;
+    }
+    .backup-section p {
+      font-size: 0.9rem;
+      color: #555;
+      margin: 0 0 0.85rem;
+      line-height: 1.45;
+    }
+    .backup-section.warning { border-color: #f0d77a; background: #fffbf0; }
+    .backup-section.danger  { border-color: #e8b8b0; background: #fff5f3; }
+    .warning-text { color: #6b5a0a; }
+    .backup-section.danger .warning-text { color: #962a1e; }
+    .backup-status {
+      margin-top: 0.6rem;
+      font-size: 0.85rem;
+      color: #666;
+    }
+    .file-picker-label { display: inline-block; cursor: pointer; }
+    .file-picker-label input[type="file"] {
+      position: absolute;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+      pointer-events: none;
+    }
+    .file-picker-btn {
+      display: inline-block;
+      padding: 0.55rem 1rem;
+      background: #fff;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .file-picker-label:hover .file-picker-btn { background: #f0f0f0; }
+    .clear-controls {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .clear-confirm-label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.85rem;
+      color: #555;
+      flex: 1;
+      min-width: 200px;
+    }
+    .clear-confirm-label input[type="text"] {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin-top: 0.3rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .clear-confirm-label code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: #fff;
+      padding: 0 0.25rem;
+      border-radius: 3px;
+      border: 1px solid #e0c4be;
+    }
+    .danger-btn {
+      padding: 0.55rem 1.1rem;
+      background: #c0392b;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .danger-btn:hover:not(:disabled) { background: #a8311f; }
+    .danger-btn:active:not(:disabled) { background: #872514; }
+    .danger-btn:disabled {
+      background: #d8a39b;
+      cursor: not-allowed;
+    }
+    #import-preview-content {
+      margin-bottom: 1rem;
+      line-height: 1.5;
+      font-size: 0.95rem;
+      color: #333;
+    }
+    #import-preview-content p { margin: 0 0 0.6rem; }
+    #import-preview-content .preview-stat { font-weight: 700; color: #1a1a1a; }
+    #import-preview-modal .danger-btn {
+      width: 100%;
+      min-height: 50px;
+      font-size: 1.05rem;
+      margin-bottom: 0.4rem;
+    }
   </style>
   <script src="https://unpkg.com/dexie@3.2.7/dist/dexie.min.js"></script>
 </head>
@@ -598,6 +707,7 @@
     <button data-view="inclass">In Class</button>
     <button data-view="review">Review</button>
     <button data-view="summary">Summary</button>
+    <button data-view="backup">Backup</button>
   </nav>
 
   <main>
@@ -738,6 +848,38 @@
         </div>
       </div>
     </section>
+
+    <section id="view-backup" class="view" hidden>
+      <h1>Backup</h1>
+
+      <div class="backup-section">
+        <h2>Export</h2>
+        <p>Download all participation data as a JSON file. Save it somewhere safe (OneDrive, email to yourself) so you can restore if needed.</p>
+        <button id="btn-export" class="primary">Export Data</button>
+        <div id="export-status" class="backup-status"></div>
+      </div>
+
+      <div class="backup-section warning">
+        <h2>Import</h2>
+        <p class="warning-text">Import will <strong>REPLACE</strong> all current data with the contents of the backup file. This cannot be undone. Export your current data first if you want to keep it.</p>
+        <label class="file-picker-label">
+          <input type="file" id="import-file" accept=".json,application/json">
+          <span class="file-picker-btn">Choose backup file&hellip;</span>
+        </label>
+        <div id="import-error" class="modal-error" hidden></div>
+      </div>
+
+      <div class="backup-section danger">
+        <h2>Clear All Data</h2>
+        <p class="warning-text">Permanently delete every student, session, and contribution. Cannot be undone. Use this when starting a new semester.</p>
+        <div class="clear-controls">
+          <label class="clear-confirm-label">Type <code>DELETE</code> to enable
+            <input type="text" id="clear-confirm" autocomplete="off" spellcheck="false">
+          </label>
+          <button id="btn-clear-all" class="danger-btn" disabled>Clear All Data</button>
+        </div>
+      </div>
+    </section>
   </main>
 
   <div id="contribution-modal" class="modal-backdrop" hidden>
@@ -766,6 +908,16 @@
       </label>
       <button type="button" class="modal-cancel" data-cancel>Cancel</button>
       <div id="edit-contrib-error" class="modal-error" hidden></div>
+    </div>
+  </div>
+
+  <div id="import-preview-modal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog">
+      <h2>Confirm Import</h2>
+      <div id="import-preview-content"></div>
+      <button id="btn-import-confirm" class="danger-btn">Replace All Data</button>
+      <button type="button" class="modal-cancel" data-cancel>Cancel</button>
+      <div id="import-confirm-error" class="modal-error" hidden></div>
     </div>
   </div>
 
@@ -904,6 +1056,7 @@
       else if (name === 'inclass') renderInClass();
       else if (name === 'review') renderReview();
       else if (name === 'summary') renderSummary();
+      else if (name === 'backup') renderBackup();
     }
 
     function formatSessionDate(isoDate) {
@@ -1813,6 +1966,228 @@
       const modalEl = document.getElementById('student-detail-modal');
       if (e.target === modalEl) { closeStudentDetail(); return; }
       if (e.target.closest('[data-cancel]')) { closeStudentDetail(); return; }
+    });
+
+    // --- Backup view (Export / Import / Clear All) ---
+
+    let pendingImport = null;
+
+    function formatExportDateTime(iso) {
+      if (!iso) return 'unknown date';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return 'unknown date';
+      return d.toLocaleString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit'
+      });
+    }
+
+    async function renderBackup() {
+      const statusEl = document.getElementById('export-status');
+      const last = localStorage.getItem('lastExport');
+      if (last) {
+        try {
+          const obj = JSON.parse(last);
+          statusEl.textContent =
+            `Last exported ${formatExportDateTime(obj.at)} — ` +
+            `${obj.students} students, ${obj.sessions} sessions, ${obj.contributions} contributions.`;
+        } catch {
+          statusEl.textContent = '';
+        }
+      } else {
+        statusEl.textContent = '';
+      }
+
+      document.getElementById('clear-confirm').value = '';
+      document.getElementById('btn-clear-all').disabled = true;
+      document.getElementById('import-error').hidden = true;
+      document.getElementById('import-file').value = '';
+    }
+
+    document.getElementById('btn-export').addEventListener('click', async () => {
+      try {
+        const students = await db.getAllStudents();
+        const sessions = await db.getAllSessions();
+        const contributions = await db.getAllContributions();
+        const exportedAt = new Date().toISOString();
+        const payload = {
+          version: 1,
+          exportedAt,
+          data: { students, sessions, contributions }
+        };
+        const json = JSON.stringify(payload, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `participation-backup-${exportedAt.slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        localStorage.setItem('lastExport', JSON.stringify({
+          at: exportedAt,
+          students: students.length,
+          sessions: sessions.length,
+          contributions: contributions.length
+        }));
+        renderBackup();
+      } catch (err) {
+        alert(`Export failed: ${err.message}`);
+      }
+    });
+
+    document.getElementById('import-file').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      const errorEl = document.getElementById('import-error');
+      errorEl.hidden = true;
+      if (!file) return;
+
+      let text;
+      try {
+        text = await file.text();
+      } catch (err) {
+        errorEl.textContent = `Couldn't read file: ${err.message}`;
+        errorEl.hidden = false;
+        e.target.value = '';
+        return;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(text);
+      } catch (err) {
+        errorEl.textContent = `File is not valid JSON: ${err.message}`;
+        errorEl.hidden = false;
+        e.target.value = '';
+        return;
+      }
+
+      if (typeof parsed !== 'object' || parsed === null) {
+        errorEl.textContent = 'File does not contain a JSON object.';
+        errorEl.hidden = false;
+        e.target.value = '';
+        return;
+      }
+      if (!('version' in parsed)) {
+        errorEl.textContent = 'Backup file is missing a "version" field.';
+        errorEl.hidden = false;
+        e.target.value = '';
+        return;
+      }
+      if (parsed.version !== 1) {
+        errorEl.textContent = "This backup is from a different version of the app and can't be imported automatically.";
+        errorEl.hidden = false;
+        e.target.value = '';
+        return;
+      }
+      if (
+        !parsed.data ||
+        typeof parsed.data !== 'object' ||
+        !Array.isArray(parsed.data.students) ||
+        !Array.isArray(parsed.data.sessions) ||
+        !Array.isArray(parsed.data.contributions)
+      ) {
+        errorEl.textContent = 'Backup file is missing students, sessions, or contributions arrays.';
+        errorEl.hidden = false;
+        e.target.value = '';
+        return;
+      }
+
+      pendingImport = parsed;
+
+      const curStudents = await db.getAllStudents();
+      const curSessions = await db.getAllSessions();
+      const curContribs = await db.getAllContributions();
+
+      document.getElementById('import-preview-content').innerHTML = `
+        <p>This file contains
+          <span class="preview-stat">${parsed.data.students.length}</span> students,
+          <span class="preview-stat">${parsed.data.sessions.length}</span> sessions,
+          <span class="preview-stat">${parsed.data.contributions.length}</span> contributions.<br>
+          Exported on <span class="preview-stat">${escapeHtml(formatExportDateTime(parsed.exportedAt))}</span>.</p>
+        <p>This will <strong>replace</strong> your current data:
+          <span class="preview-stat">${curStudents.length}</span> students,
+          <span class="preview-stat">${curSessions.length}</span> sessions,
+          <span class="preview-stat">${curContribs.length}</span> contributions.</p>
+      `;
+      document.getElementById('import-confirm-error').hidden = true;
+      document.getElementById('btn-import-confirm').disabled = false;
+      document.getElementById('import-preview-modal').hidden = false;
+
+      // Reset file input so re-selecting the same file fires change again
+      e.target.value = '';
+    });
+
+    function closeImportPreview() {
+      document.getElementById('import-preview-modal').hidden = true;
+      document.getElementById('btn-import-confirm').disabled = false;
+      pendingImport = null;
+    }
+
+    document.getElementById('import-preview-modal').addEventListener('pointerup', async (e) => {
+      const modalEl = document.getElementById('import-preview-modal');
+      if (e.target === modalEl) { closeImportPreview(); return; }
+      if (e.target.closest('[data-cancel]')) { closeImportPreview(); return; }
+      if (e.target.id !== 'btn-import-confirm') return;
+      if (!pendingImport) return;
+
+      const errorEl = document.getElementById('import-confirm-error');
+      errorEl.hidden = true;
+      const confirmBtn = document.getElementById('btn-import-confirm');
+      confirmBtn.disabled = true;
+
+      try {
+        const data = pendingImport.data;
+        await db._dexie.transaction('rw',
+          db._dexie.students,
+          db._dexie.sessions,
+          db._dexie.contributions,
+          async () => {
+            await db._dexie.contributions.clear();
+            await db._dexie.sessions.clear();
+            await db._dexie.students.clear();
+            if (data.students.length)      await db._dexie.students.bulkAdd(data.students);
+            if (data.sessions.length)      await db._dexie.sessions.bulkAdd(data.sessions);
+            if (data.contributions.length) await db._dexie.contributions.bulkAdd(data.contributions);
+          }
+        );
+
+        const summary = `Imported ${data.students.length} students, ${data.sessions.length} sessions, ${data.contributions.length} contributions.`;
+        closeImportPreview();
+        alert(summary);
+        renderBackup();
+      } catch (err) {
+        errorEl.textContent = `Import failed: ${err.message}`;
+        errorEl.hidden = false;
+        confirmBtn.disabled = false;
+      }
+    });
+
+    document.getElementById('clear-confirm').addEventListener('input', (e) => {
+      document.getElementById('btn-clear-all').disabled = e.target.value !== 'DELETE';
+    });
+
+    document.getElementById('btn-clear-all').addEventListener('click', async () => {
+      if (document.getElementById('clear-confirm').value !== 'DELETE') return;
+      if (!confirm('Permanently delete ALL data? This cannot be undone.')) return;
+      try {
+        await db._dexie.transaction('rw',
+          db._dexie.students,
+          db._dexie.sessions,
+          db._dexie.contributions,
+          async () => {
+            await db._dexie.contributions.clear();
+            await db._dexie.sessions.clear();
+            await db._dexie.students.clear();
+          }
+        );
+        alert('All data cleared.');
+        renderBackup();
+      } catch (err) {
+        alert(`Clear failed: ${err.message}`);
+      }
     });
 
     renderRoster();
