@@ -190,6 +190,153 @@
       margin-bottom: 1rem;
       font-size: 0.9rem;
     }
+
+    /* Seating chart */
+    .seating-grid {
+      display: grid;
+      gap: 0.6rem;
+      grid-template-columns: repeat(var(--cols, 1), minmax(80px, 1fr));
+    }
+    .seat-tile {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0.4rem;
+      background: #fff;
+      border: 1px solid #d8d8d8;
+      border-radius: 10px;
+      font-size: 1.15rem;
+      font-weight: 500;
+      color: #1a1a1a;
+      position: relative;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      overflow: hidden;
+      word-break: break-word;
+      line-height: 1.15;
+      transition: background-color 80ms;
+    }
+    .seat-tile.has-contrib {
+      background: #e8f3eb;
+      border-color: #b8d8be;
+    }
+    .seat-tile:active {
+      background: #cfcfcf;
+    }
+    .seat-tile.has-contrib:active {
+      background: #c3dcc8;
+    }
+    .seat-name { pointer-events: none; }
+    .seat-badge {
+      position: absolute;
+      top: 5px;
+      right: 6px;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 5px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    /* Contribution modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 1rem;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.25rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+      box-sizing: border-box;
+    }
+    .modal h2 {
+      margin: 0 0 1rem;
+      font-size: 1.35rem;
+      text-align: center;
+    }
+    .quality-btn {
+      display: block;
+      width: 100%;
+      min-height: 60px;
+      margin-bottom: 0.6rem;
+      padding: 0 1rem;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      font-family: inherit;
+    }
+    .quality-substantive { background: #3a8a4a; }
+    .quality-substantive:active { background: #2e6e3b; }
+    .quality-okay { background: #707070; }
+    .quality-okay:active { background: #555; }
+    .quality-talking { background: #c89034; }
+    .quality-talking:active { background: #a8772a; }
+    .note-label {
+      display: block;
+      font-size: 0.85rem;
+      color: #555;
+      margin: 0.75rem 0 0.25rem;
+    }
+    .note-label input {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.5rem 0.75rem;
+      height: 42px;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin-top: 0.3rem;
+      font-family: inherit;
+    }
+    .modal-cancel {
+      display: block;
+      margin: 0.75rem auto 0;
+      background: none;
+      border: none;
+      color: #777;
+      font-size: 0.95rem;
+      text-decoration: underline;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      touch-action: manipulation;
+      font-family: inherit;
+    }
+    .modal-error {
+      margin-top: 0.6rem;
+      color: #c00;
+      font-size: 0.9rem;
+      text-align: center;
+    }
   </style>
   <script src="https://unpkg.com/dexie@3.2.7/dist/dexie.min.js"></script>
 </head>
@@ -277,7 +424,7 @@
           </div>
           <button id="btn-end-session">End Session</button>
         </div>
-        <div class="seating-placeholder">Seating chart coming in next chunk</div>
+        <div id="seating-area"></div>
       </div>
     </section>
 
@@ -286,6 +433,20 @@
       <p>Not built yet.</p>
     </section>
   </main>
+
+  <div id="contribution-modal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-labelledby="modal-student-name">
+      <h2 id="modal-student-name"></h2>
+      <button type="button" class="quality-btn quality-substantive" data-quality="Substantive">Substantive</button>
+      <button type="button" class="quality-btn quality-okay" data-quality="Okay">Okay</button>
+      <button type="button" class="quality-btn quality-talking" data-quality="Just talking">Just talking</button>
+      <label class="note-label">Note (optional)
+        <input id="modal-note" type="text" autocomplete="off">
+      </label>
+      <button type="button" class="modal-cancel" data-cancel>Cancel</button>
+      <div id="modal-error" class="modal-error" hidden></div>
+    </div>
+  </div>
 
   <script>
     const _dexie = new Dexie('ParticipationTracker');
@@ -420,10 +581,13 @@
         document.getElementById('session-date').textContent = formatSessionDate(current.date);
         const topic = (current.topic ?? '').trim();
         document.getElementById('session-topic').textContent = topic || 'Untitled session';
+        await renderSeatingChart(current);
       } else {
         noActive.hidden = false;
         form.hidden = true;
         active.hidden = true;
+        activeSessionIdForChart = null;
+        document.getElementById('seating-area').innerHTML = '';
       }
     }
 
@@ -636,6 +800,132 @@
         : '';
       resultEl.innerHTML = summary + errList;
       renderRoster();
+    });
+
+    // --- Seating chart + contribution modal ---
+
+    let activeSessionIdForChart = null;
+    let sessionContribCounts = new Map();
+    let modalContext = null;
+    let submitting = false;
+
+    async function renderSeatingChart(session) {
+      const area = document.getElementById('seating-area');
+      if (!session) {
+        activeSessionIdForChart = null;
+        area.innerHTML = '';
+        return;
+      }
+      activeSessionIdForChart = session.id;
+
+      const students = await db.getAllStudents();
+      if (students.length === 0) {
+        area.innerHTML = '<p class="empty">No students yet. Add students in the Roster view first.</p>';
+        return;
+      }
+
+      const contribs = await db.getContributionsBySession(session.id);
+      sessionContribCounts = new Map();
+      for (const c of contribs) {
+        sessionContribCounts.set(c.student_id, (sessionContribCounts.get(c.student_id) || 0) + 1);
+      }
+
+      const maxRow = students.reduce((m, s) => Math.max(m, Number(s.seat_row) || 1), 1);
+      const maxCol = students.reduce((m, s) => Math.max(m, Number(s.seat_col) || 1), 1);
+
+      const tiles = students.map(s => {
+        const count = sessionContribCounts.get(s.id) || 0;
+        const has = count > 0 ? ' has-contrib' : '';
+        const row = Number(s.seat_row) || 1;
+        const col = Number(s.seat_col) || 1;
+        return `
+          <div class="seat-tile${has}" data-student-id="${s.id}" role="button" tabindex="0"
+               style="grid-row: ${row}; grid-column: ${col};">
+            <span class="seat-name">${escapeHtml(s.name)}</span>
+            <span class="seat-badge"${count ? '' : ' hidden'}>${count}</span>
+          </div>
+        `;
+      }).join('');
+
+      area.innerHTML = `
+        <div class="seating-grid" style="--cols: ${maxCol}; --rows: ${maxRow};">
+          ${tiles}
+        </div>
+      `;
+    }
+
+    function updateTileBadge(studentId) {
+      const tile = document.querySelector(`.seat-tile[data-student-id="${studentId}"]`);
+      if (!tile) return;
+      const count = sessionContribCounts.get(studentId) || 0;
+      const badge = tile.querySelector('.seat-badge');
+      if (count > 0) {
+        badge.textContent = String(count);
+        badge.hidden = false;
+        tile.classList.add('has-contrib');
+      } else {
+        badge.hidden = true;
+        tile.classList.remove('has-contrib');
+      }
+    }
+
+    function openContributionModal(studentId, sessionId) {
+      const tile = document.querySelector(`.seat-tile[data-student-id="${studentId}"]`);
+      const name = tile?.querySelector('.seat-name')?.textContent || 'Student';
+      modalContext = { studentId, sessionId };
+      submitting = false;
+      document.getElementById('modal-student-name').textContent = name;
+      document.getElementById('modal-note').value = '';
+      document.getElementById('modal-error').hidden = true;
+      document.getElementById('contribution-modal').hidden = false;
+    }
+
+    function closeContributionModal() {
+      document.getElementById('contribution-modal').hidden = true;
+      modalContext = null;
+      submitting = false;
+    }
+
+    // Delegated tap handler on the seating area
+    document.getElementById('seating-area').addEventListener('pointerup', (e) => {
+      const tile = e.target.closest('.seat-tile');
+      if (!tile) return;
+      if (!activeSessionIdForChart) return;
+      openContributionModal(Number(tile.dataset.studentId), activeSessionIdForChart);
+    });
+
+    // Modal: handles backdrop, cancel, and quality buttons
+    const modalEl = document.getElementById('contribution-modal');
+    modalEl.addEventListener('pointerup', async (e) => {
+      if (e.target === modalEl) { closeContributionModal(); return; }
+      if (e.target.closest('[data-cancel]')) { closeContributionModal(); return; }
+
+      const qualityBtn = e.target.closest('.quality-btn');
+      if (!qualityBtn) return;
+      if (!modalContext || submitting) return;
+
+      submitting = true;
+      const { studentId, sessionId } = modalContext;
+      const quality = qualityBtn.dataset.quality;
+      const note = document.getElementById('modal-note').value.trim();
+      const errorEl = document.getElementById('modal-error');
+      errorEl.hidden = true;
+
+      try {
+        await db.addContribution({
+          student_id: studentId,
+          session_id: sessionId,
+          quality,
+          note
+        });
+        sessionContribCounts.set(studentId, (sessionContribCounts.get(studentId) || 0) + 1);
+        updateTileBadge(studentId);
+        closeContributionModal();
+      } catch (err) {
+        errorEl.textContent = `Couldn't save: ${err.message}. Tap a quality button to retry.`;
+        errorEl.hidden = false;
+        submitting = false;
+      }
     });
 
     renderRoster();
