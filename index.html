@@ -338,6 +338,131 @@
       font-size: 0.9rem;
       text-align: center;
     }
+    .modal-subheader {
+      text-align: center;
+      color: #666;
+      font-size: 0.95rem;
+      margin: -0.5rem 0 0.85rem;
+    }
+    .note-label select {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.55rem 0.75rem;
+      height: 42px;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin-top: 0.3rem;
+      font-family: inherit;
+      background: #fff;
+    }
+
+    /* Review view */
+    .review-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    #review-session-picker {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.95rem;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      background: #fff;
+      font-family: inherit;
+      min-width: 280px;
+      max-width: 100%;
+    }
+    .review-header {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1rem;
+    }
+    #review-date { font-size: 0.85rem; color: #666; }
+    #review-topic { font-size: 1.2rem; font-weight: 600; margin: 0.1rem 0 0.4rem; }
+    #review-stats { font-size: 0.9rem; color: #555; }
+    .status-active {
+      display: inline-block;
+      background: #3a8a4a;
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      padding: 0.12rem 0.45rem;
+      border-radius: 4px;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+      text-transform: uppercase;
+    }
+    .student-block {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    .student-block.empty {
+      border-style: dashed;
+      border-color: #e8e8e8;
+      background: #fafafa;
+      padding-left: 1.6rem;
+    }
+    .student-block.empty .student-name {
+      color: #9a9a9a;
+      font-weight: 400;
+      margin-bottom: 0;
+    }
+    .student-name { font-weight: 600; font-size: 1rem; margin-bottom: 0.35rem; }
+    .contrib-count { color: #888; font-weight: 400; font-size: 0.85rem; margin-left: 0.25rem; }
+    .no-contrib { color: #aaa; font-size: 0.85rem; font-style: italic; margin-top: 0.1rem; }
+    .contrib-list { display: flex; flex-direction: column; gap: 0.3rem; }
+    .contrib-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.9rem;
+      padding: 0.2rem 0;
+      flex-wrap: wrap;
+    }
+    .contrib-time {
+      color: #888;
+      font-variant-numeric: tabular-nums;
+      min-width: 70px;
+      font-size: 0.85rem;
+    }
+    .quality-badge {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .quality-badge.quality-substantive { background: #3a8a4a; }
+    .quality-badge.quality-okay { background: #707070; }
+    .quality-badge.quality-talking { background: #c89034; }
+    .contrib-note { color: #444; flex: 1; min-width: 0; }
+    .contrib-actions { margin-left: auto; display: flex; gap: 0.4rem; }
+    .link-btn {
+      background: none;
+      border: none;
+      padding: 0.2rem 0.35rem;
+      color: #555;
+      font-size: 0.82rem;
+      cursor: pointer;
+      text-decoration: underline;
+      font-family: inherit;
+    }
+    .link-btn:hover { color: #1a1a1a; }
+    .link-btn.danger { color: #c00; }
+    .link-btn.danger:hover { color: #800; }
   </style>
   <script src="https://unpkg.com/dexie@3.2.7/dist/dexie.min.js"></script>
 </head>
@@ -430,8 +555,21 @@
     </section>
 
     <section id="view-review" class="view" hidden>
-      <h1>Review</h1>
-      <p>Not built yet.</p>
+      <p id="review-empty" class="empty" hidden>No sessions yet. Start one from the In Class view.</p>
+
+      <div id="review-toolbar" class="review-toolbar" hidden>
+        <select id="review-session-picker" aria-label="Session"></select>
+        <button id="btn-add-contrib" class="primary">+ Add Contribution</button>
+      </div>
+
+      <div id="review-content" hidden>
+        <div class="review-header">
+          <div id="review-date"></div>
+          <div id="review-topic"></div>
+          <div id="review-stats"></div>
+        </div>
+        <div id="review-student-list"></div>
+      </div>
     </section>
   </main>
 
@@ -446,6 +584,38 @@
       </label>
       <button type="button" class="modal-cancel" data-cancel>Cancel</button>
       <div id="modal-error" class="modal-error" hidden></div>
+    </div>
+  </div>
+
+  <div id="edit-contrib-modal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog">
+      <h2>Edit Contribution</h2>
+      <div id="edit-contrib-student" class="modal-subheader"></div>
+      <button type="button" class="quality-btn quality-substantive" data-edit-quality="Substantive">Substantive</button>
+      <button type="button" class="quality-btn quality-okay" data-edit-quality="Okay">Okay</button>
+      <button type="button" class="quality-btn quality-talking" data-edit-quality="Just talking">Just talking</button>
+      <label class="note-label">Note (optional)
+        <input id="edit-contrib-note" type="text" autocomplete="off">
+      </label>
+      <button type="button" class="modal-cancel" data-cancel>Cancel</button>
+      <div id="edit-contrib-error" class="modal-error" hidden></div>
+    </div>
+  </div>
+
+  <div id="add-contrib-modal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog">
+      <h2>Add Contribution</h2>
+      <label class="note-label">Student
+        <select id="add-contrib-student"></select>
+      </label>
+      <button type="button" class="quality-btn quality-substantive" data-add-quality="Substantive">Substantive</button>
+      <button type="button" class="quality-btn quality-okay" data-add-quality="Okay">Okay</button>
+      <button type="button" class="quality-btn quality-talking" data-add-quality="Just talking">Just talking</button>
+      <label class="note-label">Note (optional)
+        <input id="add-contrib-note" type="text" autocomplete="off">
+      </label>
+      <button type="button" class="modal-cancel" data-cancel>Cancel</button>
+      <div id="add-contrib-error" class="modal-error" hidden></div>
     </div>
   </div>
 
@@ -526,6 +696,9 @@
       async deleteContribution(id) {
         await _dexie.contributions.delete(id);
       },
+      async getContribution(id) {
+        return await _dexie.contributions.get(id);
+      },
       async getContributionsBySession(sessionId) {
         return await _dexie.contributions.where('session_id').equals(sessionId).toArray();
       },
@@ -553,6 +726,7 @@
       });
       if (name === 'roster') renderRoster();
       else if (name === 'inclass') renderInClass();
+      else if (name === 'review') renderReview();
     }
 
     function formatSessionDate(isoDate) {
@@ -926,6 +1100,272 @@
         errorEl.textContent = `Couldn't save: ${err.message}. Tap a quality button to retry.`;
         errorEl.hidden = false;
         submitting = false;
+      }
+    });
+
+    // --- Review view ---
+
+    let reviewSessionId = null;
+    let editContribContext = null;
+    let editSubmitting = false;
+    let addContribContext = null;
+    let addSubmitting = false;
+
+    function formatTimeOfDay(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function qualityClass(quality) {
+      if (quality === 'Substantive') return 'substantive';
+      if (quality === 'Okay') return 'okay';
+      if (quality === 'Just talking') return 'talking';
+      return 'okay';
+    }
+
+    async function renderReview() {
+      const sessions = await db.getAllSessions();
+      sessions.sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+        return b.id - a.id;
+      });
+
+      const emptyEl = document.getElementById('review-empty');
+      const toolbar = document.getElementById('review-toolbar');
+      const content = document.getElementById('review-content');
+
+      if (sessions.length === 0) {
+        emptyEl.hidden = false;
+        toolbar.hidden = true;
+        content.hidden = true;
+        reviewSessionId = null;
+        return;
+      }
+
+      emptyEl.hidden = true;
+      toolbar.hidden = false;
+      content.hidden = false;
+
+      const picker = document.getElementById('review-session-picker');
+      picker.innerHTML = sessions.map(s => {
+        const topic = (s.topic ?? '').trim() || 'Untitled session';
+        return `<option value="${s.id}">${escapeHtml(formatSessionDate(s.date))} — ${escapeHtml(topic)}</option>`;
+      }).join('');
+
+      if (!reviewSessionId || !sessions.find(s => s.id === reviewSessionId)) {
+        reviewSessionId = sessions[0].id;
+      }
+      picker.value = String(reviewSessionId);
+
+      await renderSessionDetail(reviewSessionId);
+    }
+
+    async function renderSessionDetail(sessionId) {
+      const session = await db.getSession(sessionId);
+      if (!session) return;
+
+      const students = await db.getAllStudents();
+      students.sort((a, b) =>
+        (Number(a.seat_row) - Number(b.seat_row)) ||
+        (Number(a.seat_col) - Number(b.seat_col))
+      );
+
+      const contribs = await db.getContributionsBySession(sessionId);
+
+      const byStudent = new Map();
+      for (const c of contribs) {
+        if (!byStudent.has(c.student_id)) byStudent.set(c.student_id, []);
+        byStudent.get(c.student_id).push(c);
+      }
+      for (const arr of byStudent.values()) {
+        arr.sort((a, b) =>
+          (a.timestamp ?? '') < (b.timestamp ?? '') ? -1 :
+          (a.timestamp ?? '') > (b.timestamp ?? '') ? 1 : 0
+        );
+      }
+
+      const topic = (session.topic ?? '').trim() || 'Untitled session';
+      document.getElementById('review-date').textContent = formatSessionDate(session.date);
+      document.getElementById('review-topic').textContent = topic;
+
+      const total = contribs.length;
+      const uniq = byStudent.size;
+      const statusHtml = session.status === 'active'
+        ? '<span class="status-active">Active</span>'
+        : '';
+      document.getElementById('review-stats').innerHTML =
+        `${total} contribution${total === 1 ? '' : 's'} · ${uniq} student${uniq === 1 ? '' : 's'} contributed${statusHtml}`;
+
+      const listEl = document.getElementById('review-student-list');
+
+      if (students.length === 0) {
+        listEl.innerHTML = '<p class="empty">No students yet. Add students in the Roster view first.</p>';
+        return;
+      }
+
+      listEl.innerHTML = students.map(s => {
+        const studentContribs = byStudent.get(s.id) || [];
+        if (studentContribs.length === 0) {
+          return `
+            <div class="student-block empty">
+              <div class="student-name">${escapeHtml(s.name)}</div>
+              <div class="no-contrib">No contributions this session</div>
+            </div>
+          `;
+        }
+        const rows = studentContribs.map(c => `
+          <div class="contrib-row">
+            <span class="contrib-time">${formatTimeOfDay(c.timestamp)}</span>
+            <span class="quality-badge quality-${qualityClass(c.quality)}">${escapeHtml(c.quality)}</span>
+            ${c.note ? `<span class="contrib-note">${escapeHtml(c.note)}</span>` : '<span class="contrib-note"></span>'}
+            <span class="contrib-actions">
+              <button type="button" class="link-btn" data-action="edit-contrib" data-id="${c.id}">Edit</button>
+              <button type="button" class="link-btn danger" data-action="delete-contrib" data-id="${c.id}">Delete</button>
+            </span>
+          </div>
+        `).join('');
+        return `
+          <div class="student-block">
+            <div class="student-name">${escapeHtml(s.name)}<span class="contrib-count">(${studentContribs.length})</span></div>
+            <div class="contrib-list">${rows}</div>
+          </div>
+        `;
+      }).join('');
+
+      listEl.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = Number(btn.dataset.id);
+          if (btn.dataset.action === 'edit-contrib') openEditContribModal(id);
+          else if (btn.dataset.action === 'delete-contrib') handleDeleteContrib(id);
+        });
+      });
+    }
+
+    document.getElementById('review-session-picker').addEventListener('change', (e) => {
+      reviewSessionId = Number(e.target.value);
+      renderSessionDetail(reviewSessionId);
+    });
+
+    // --- Edit contribution modal ---
+
+    async function openEditContribModal(contribId) {
+      const c = await db.getContribution(contribId);
+      if (!c) return;
+      const student = await db.getStudent(c.student_id);
+      editContribContext = { id: contribId };
+      editSubmitting = false;
+      document.getElementById('edit-contrib-student').textContent = student?.name ?? 'Unknown student';
+      document.getElementById('edit-contrib-note').value = c.note ?? '';
+      document.getElementById('edit-contrib-error').hidden = true;
+      document.getElementById('edit-contrib-modal').hidden = false;
+    }
+
+    function closeEditContribModal() {
+      document.getElementById('edit-contrib-modal').hidden = true;
+      editContribContext = null;
+      editSubmitting = false;
+    }
+
+    document.getElementById('edit-contrib-modal').addEventListener('pointerup', async (e) => {
+      const modalEl = document.getElementById('edit-contrib-modal');
+      if (e.target === modalEl) { closeEditContribModal(); return; }
+      if (e.target.closest('[data-cancel]')) { closeEditContribModal(); return; }
+
+      const btn = e.target.closest('[data-edit-quality]');
+      if (!btn) return;
+      if (!editContribContext || editSubmitting) return;
+
+      editSubmitting = true;
+      const quality = btn.dataset.editQuality;
+      const note = document.getElementById('edit-contrib-note').value.trim();
+      const errorEl = document.getElementById('edit-contrib-error');
+      errorEl.hidden = true;
+
+      try {
+        await db.updateContribution(editContribContext.id, { quality, note });
+        closeEditContribModal();
+        if (reviewSessionId) await renderSessionDetail(reviewSessionId);
+      } catch (err) {
+        errorEl.textContent = `Couldn't save: ${err.message}`;
+        errorEl.hidden = false;
+        editSubmitting = false;
+      }
+    });
+
+    async function handleDeleteContrib(contribId) {
+      const ok = confirm('Delete this contribution? This cannot be undone.');
+      if (!ok) return;
+      await db.deleteContribution(contribId);
+      if (reviewSessionId) await renderSessionDetail(reviewSessionId);
+    }
+
+    // --- Add contribution modal ---
+
+    async function openAddContribModal() {
+      if (!reviewSessionId) return;
+      const students = await db.getAllStudents();
+      students.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+      const select = document.getElementById('add-contrib-student');
+      if (students.length === 0) {
+        alert('No students in the roster yet. Add some from the Roster view first.');
+        return;
+      }
+      select.innerHTML = students.map(s =>
+        `<option value="${s.id}">${escapeHtml(s.name)}</option>`
+      ).join('');
+      document.getElementById('add-contrib-note').value = '';
+      document.getElementById('add-contrib-error').hidden = true;
+      addContribContext = { sessionId: reviewSessionId };
+      addSubmitting = false;
+      document.getElementById('add-contrib-modal').hidden = false;
+    }
+
+    function closeAddContribModal() {
+      document.getElementById('add-contrib-modal').hidden = true;
+      addContribContext = null;
+      addSubmitting = false;
+    }
+
+    document.getElementById('btn-add-contrib').addEventListener('click', openAddContribModal);
+
+    document.getElementById('add-contrib-modal').addEventListener('pointerup', async (e) => {
+      const modalEl = document.getElementById('add-contrib-modal');
+      if (e.target === modalEl) { closeAddContribModal(); return; }
+      if (e.target.closest('[data-cancel]')) { closeAddContribModal(); return; }
+
+      const btn = e.target.closest('[data-add-quality]');
+      if (!btn) return;
+      if (!addContribContext || addSubmitting) return;
+
+      addSubmitting = true;
+      const studentId = Number(document.getElementById('add-contrib-student').value);
+      const quality = btn.dataset.addQuality;
+      const note = document.getElementById('add-contrib-note').value.trim();
+      const errorEl = document.getElementById('add-contrib-error');
+      errorEl.hidden = true;
+
+      if (!studentId) {
+        errorEl.textContent = 'Please select a student.';
+        errorEl.hidden = false;
+        addSubmitting = false;
+        return;
+      }
+
+      try {
+        await db.addContribution({
+          student_id: studentId,
+          session_id: addContribContext.sessionId,
+          quality,
+          note
+        });
+        closeAddContribModal();
+        if (reviewSessionId) await renderSessionDetail(reviewSessionId);
+      } catch (err) {
+        errorEl.textContent = `Couldn't save: ${err.message}`;
+        errorEl.hidden = false;
+        addSubmitting = false;
       }
     });
 
