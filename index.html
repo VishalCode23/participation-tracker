@@ -9,30 +9,182 @@
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #f7f7f8;
       color: #1a1a1a;
     }
-    main {
-      min-height: 100%;
+    .topnav {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .topnav button {
+      padding: 0.5rem 1rem;
+      border: 1px solid #d0d0d0;
+      background: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .topnav button.active {
+      background: #1a1a1a;
+      color: #fff;
+      border-color: #1a1a1a;
+    }
+    main { max-width: 1000px; margin: 0 auto; padding: 1.5rem 1rem; }
+    .view h1 { font-size: 1.5rem; margin: 0 0 1rem; }
+    .roster-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .roster-toolbar > div { display: flex; gap: 0.5rem; }
+    button {
+      padding: 0.45rem 0.85rem;
+      border: 1px solid #d0d0d0;
+      background: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button:hover { background: #f0f0f0; }
+    button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+    button.primary:hover { background: #333; }
+    button.danger { color: #c00; border-color: #e0c0c0; }
+    button.danger:hover { background: #fff0f0; }
+    #student-form, #bulk-import {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    #student-form h2, #bulk-import h2 { font-size: 1.05rem; margin: 0 0 0.75rem; }
+    #student-form-el {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+    #student-form-el label {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-      box-sizing: border-box;
-      text-align: center;
+      font-size: 0.85rem;
+      color: #555;
     }
-    h1 { font-size: 2rem; margin: 0 0 0.5rem; }
-    p  { color: #555; margin: 0; }
+    #student-form-el input {
+      padding: 0.5rem;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      margin-top: 0.25rem;
+      font-size: 0.95rem;
+    }
+    .form-actions { grid-column: 1 / -1; display: flex; gap: 0.5rem; }
+    #bulk-text {
+      width: 100%;
+      box-sizing: border-box;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85rem;
+      padding: 0.5rem;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+    }
+    #bulk-import p.hint { margin: 0 0 0.5rem; font-size: 0.85rem; color: #666; }
+    .roster-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .roster-table th, .roster-table td {
+      padding: 0.6rem 0.85rem;
+      text-align: left;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.95rem;
+    }
+    .roster-table th {
+      background: #fafafa;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #555;
+    }
+    .roster-table tbody tr:last-child td { border-bottom: none; }
+    .roster-table td:last-child { white-space: nowrap; }
+    .empty {
+      color: #777;
+      text-align: center;
+      padding: 2rem;
+      background: #fff;
+      border: 1px dashed #d0d0d0;
+      border-radius: 8px;
+    }
+    .errors { color: #c00; margin: 0.5rem 0 0; padding-left: 1.2rem; font-size: 0.9rem; }
+    .bulk-summary { margin: 0.5rem 0 0; font-size: 0.9rem; }
   </style>
   <script src="https://unpkg.com/dexie@3.2.7/dist/dexie.min.js"></script>
 </head>
 <body>
+  <nav class="topnav">
+    <button data-view="roster" class="active">Roster</button>
+    <button data-view="inclass">In Class</button>
+    <button data-view="review">Review</button>
+  </nav>
+
   <main>
-    <h1>Participation Tracker</h1>
-    <p>Placeholder &mdash; setup in progress.</p>
+    <section id="view-roster" class="view">
+      <div class="roster-toolbar">
+        <h1>Roster</h1>
+        <div>
+          <button id="btn-add-student" class="primary">+ Add Student</button>
+          <button id="btn-bulk-import">Bulk Import</button>
+        </div>
+      </div>
+
+      <div id="student-form" hidden>
+        <h2 id="student-form-title">Add Student</h2>
+        <form id="student-form-el">
+          <label>Name
+            <input name="name" required autocomplete="off">
+          </label>
+          <label>Computing ID
+            <input name="computing_id" autocomplete="off">
+          </label>
+          <label>Seat Row
+            <input name="seat_row" type="number" min="1" step="1" required>
+          </label>
+          <label>Seat Column
+            <input name="seat_col" type="number" min="1" step="1" required>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary">Save</button>
+            <button type="button" id="student-form-cancel">Cancel</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="bulk-import" hidden>
+        <h2>Bulk Import</h2>
+        <p class="hint">Paste CSV: <code>name,seat_row,seat_col,computing_id</code> (one per line; header row optional).</p>
+        <textarea id="bulk-text" rows="8" placeholder="Alice Johnson,1,1,aj3cd&#10;Brian Lee,1,2,bl7xy"></textarea>
+        <div class="form-actions">
+          <button id="bulk-submit" class="primary">Import</button>
+          <button id="bulk-cancel">Cancel</button>
+        </div>
+        <div id="bulk-result"></div>
+      </div>
+
+      <div id="roster-content"></div>
+    </section>
+
+    <section id="view-inclass" class="view" hidden>
+      <h1>In Class</h1>
+      <p>Not built yet.</p>
+    </section>
+
+    <section id="view-review" class="view" hidden>
+      <h1>Review</h1>
+      <p>Not built yet.</p>
+    </section>
   </main>
 
   <script>
@@ -115,6 +267,200 @@
     };
 
     window.db = db;
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+      ));
+    }
+
+    function showView(name) {
+      document.querySelectorAll('.view').forEach(v => v.hidden = true);
+      document.getElementById('view-' + name).hidden = false;
+      document.querySelectorAll('.topnav button').forEach(b => {
+        b.classList.toggle('active', b.dataset.view === name);
+      });
+      if (name === 'roster') renderRoster();
+    }
+
+    document.querySelectorAll('.topnav button').forEach(b => {
+      b.addEventListener('click', () => showView(b.dataset.view));
+    });
+
+    let editingStudentId = null;
+
+    async function renderRoster() {
+      const students = await db.getAllStudents();
+      students.sort((a, b) =>
+        (a.seat_row - b.seat_row) || (a.seat_col - b.seat_col)
+      );
+      const container = document.getElementById('roster-content');
+
+      if (students.length === 0) {
+        container.innerHTML =
+          '<p class="empty">No students yet. Use Add Student or Bulk Import to get started.</p>';
+        return;
+      }
+
+      const rows = students.map(s => `
+        <tr>
+          <td>${escapeHtml(s.name)}</td>
+          <td>Row ${escapeHtml(s.seat_row)}, Col ${escapeHtml(s.seat_col)}</td>
+          <td>${escapeHtml(s.computing_id)}</td>
+          <td>
+            <button data-action="edit" data-id="${s.id}">Edit</button>
+            <button data-action="delete" data-id="${s.id}" class="danger">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+
+      container.innerHTML = `
+        <table class="roster-table">
+          <thead>
+            <tr><th>Name</th><th>Seat</th><th>Computing ID</th><th>Actions</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+
+      container.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = Number(btn.dataset.id);
+          if (btn.dataset.action === 'edit') openEditForm(id);
+          else handleDelete(id);
+        });
+      });
+    }
+
+    function openAddForm() {
+      editingStudentId = null;
+      const form = document.getElementById('student-form-el');
+      form.reset();
+      document.getElementById('student-form-title').textContent = 'Add Student';
+      document.getElementById('student-form').hidden = false;
+      document.getElementById('bulk-import').hidden = true;
+      form.name.focus();
+    }
+
+    async function openEditForm(id) {
+      const s = await db.getStudent(id);
+      if (!s) return;
+      editingStudentId = id;
+      const form = document.getElementById('student-form-el');
+      form.name.value = s.name ?? '';
+      form.seat_row.value = s.seat_row ?? '';
+      form.seat_col.value = s.seat_col ?? '';
+      form.computing_id.value = s.computing_id ?? '';
+      document.getElementById('student-form-title').textContent = 'Edit Student';
+      document.getElementById('student-form').hidden = false;
+      document.getElementById('bulk-import').hidden = true;
+      form.name.focus();
+    }
+
+    document.getElementById('btn-add-student').addEventListener('click', openAddForm);
+    document.getElementById('student-form-cancel').addEventListener('click', () => {
+      document.getElementById('student-form').hidden = true;
+    });
+
+    document.getElementById('student-form-el').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const data = {
+        name: String(fd.get('name')).trim(),
+        seat_row: Number(fd.get('seat_row')),
+        seat_col: Number(fd.get('seat_col')),
+        computing_id: String(fd.get('computing_id') ?? '').trim()
+      };
+      if (editingStudentId) {
+        await db.updateStudent(editingStudentId, data);
+      } else {
+        await db.addStudent(data);
+      }
+      document.getElementById('student-form').hidden = true;
+      renderRoster();
+    });
+
+    async function handleDelete(id) {
+      const s = await db.getStudent(id);
+      if (!s) return;
+      const ok = confirm(`Delete ${s.name}? This will also remove their contribution history.`);
+      if (!ok) return;
+      await db.deleteStudent(id);
+      renderRoster();
+    }
+
+    document.getElementById('btn-bulk-import').addEventListener('click', () => {
+      document.getElementById('bulk-import').hidden = false;
+      document.getElementById('student-form').hidden = true;
+      document.getElementById('bulk-text').value = '';
+      document.getElementById('bulk-result').innerHTML = '';
+    });
+    document.getElementById('bulk-cancel').addEventListener('click', () => {
+      document.getElementById('bulk-import').hidden = true;
+    });
+
+    document.getElementById('bulk-submit').addEventListener('click', async () => {
+      const text = document.getElementById('bulk-text').value;
+      const resultEl = document.getElementById('bulk-result');
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+      if (lines.length === 0) {
+        resultEl.innerHTML = '<p class="bulk-summary">Nothing to import.</p>';
+        return;
+      }
+
+      const firstCols = lines[0].split(',').map(c => c.trim().toLowerCase());
+      const headerKeywords = ['name', 'seat_row', 'seat_col', 'computing_id'];
+      const isHeader = firstCols.some(c => headerKeywords.includes(c));
+      const dataLines = isHeader ? lines.slice(1) : lines;
+
+      let added = 0;
+      const errors = [];
+
+      for (let i = 0; i < dataLines.length; i++) {
+        const lineNum = isHeader ? i + 2 : i + 1;
+        const cols = dataLines[i].split(',').map(c => c.trim());
+        if (cols.length < 3) {
+          errors.push(`Line ${lineNum}: expected at least 3 columns (name, seat_row, seat_col), got ${cols.length}`);
+          continue;
+        }
+        const [name, seatRowStr, seatColStr, computingId = ''] = cols;
+        const row = Number(seatRowStr);
+        const col = Number(seatColStr);
+        if (!name) {
+          errors.push(`Line ${lineNum}: name is required`);
+          continue;
+        }
+        if (!Number.isFinite(row) || row < 1 || !Number.isInteger(row)) {
+          errors.push(`Line ${lineNum}: invalid seat_row "${seatRowStr}"`);
+          continue;
+        }
+        if (!Number.isFinite(col) || col < 1 || !Number.isInteger(col)) {
+          errors.push(`Line ${lineNum}: invalid seat_col "${seatColStr}"`);
+          continue;
+        }
+        try {
+          await db.addStudent({
+            name,
+            seat_row: row,
+            seat_col: col,
+            computing_id: computingId
+          });
+          added++;
+        } catch (err) {
+          errors.push(`Line ${lineNum}: ${err.message}`);
+        }
+      }
+
+      const summary = `<p class="bulk-summary">Added ${added} student${added === 1 ? '' : 's'}.</p>`;
+      const errList = errors.length
+        ? `<ul class="errors">${errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>`
+        : '';
+      resultEl.innerHTML = summary + errList;
+      renderRoster();
+    });
+
+    renderRoster();
   </script>
 </body>
 </html>
